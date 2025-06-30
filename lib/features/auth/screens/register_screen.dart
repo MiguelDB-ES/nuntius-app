@@ -1,10 +1,10 @@
 // lib/features/auth/screens/register_screen.dart
 import 'package:flutter/material.dart';
-import 'package:nuntius/core/routes/app_routes.dart';
+import 'package:flutter/services.dart'; // Para FilteringTextInputFormatter
+import 'package:nuntius/core/routes/app_routes.dart'; // Pode não ser usado diretamente aqui, mas manter por segurança
 import 'package:nuntius/data/repositories/auth_repository.dart';
 import 'package:nuntius/models/user_model.dart';
 import 'package:intl/intl.dart';
-// Importa o pacote de máscara de input
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -22,6 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _dateOfBirthController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  
   bool _agreeToTerms = false;
   final AuthRepository _authRepository = AuthRepository();
 
@@ -57,40 +58,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return;
       }
 
-      // Remover a máscara do CPF e da Data antes de salvar no UserModel,
-      // pois o DB espera a string pura ou formatada (YYYY-MM-DD para data).
-      String? rawCpf = _cpfFormatter.getUnmaskedText().isNotEmpty ? _cpfFormatter.getUnmaskedText() : null;
-      String? rawDateOfBirth;
+      String? formattedDateOfBirth;
       if (_dateOfBirthController.text.isNotEmpty) {
         try {
-          // Converte DD/MM/YYYY para YYYY-MM-DD para salvar no banco
-          DateTime parsedDate = DateFormat('dd/MM/yyyy').parse(_dateOfBirthController.text);
-          rawDateOfBirth = DateFormat('yyyy-MM-dd').format(parsedDate);
+          final parsedDate = DateFormat('dd/MM/yyyy').parseStrict(_dateOfBirthController.text);
+          formattedDateOfBirth = DateFormat('yyyy-MM-dd').format(parsedDate);
         } catch (e) {
-          // Em caso de erro na data, trata como nulo ou exibe um erro
-          rawDateOfBirth = null;
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Formato de Data de Nascimento inválido. Use DD/MM/AAAA.')),
-            );
-          }
-          return; // Interrompe o registro se a data for inválida
+          debugPrint('Erro de formatação de data: $e');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Formato de Data de Nascimento inválido. Use DD/MM/AAAA.')),
+          );
+          return;
         }
-      } else {
-        rawDateOfBirth = null;
       }
-
 
       final user = UserModel(
         fullName: _fullNameController.text,
         email: _emailController.text,
-        cpf: rawCpf,
+        cpf: _cpfController.text.isNotEmpty ? _cpfFormatter.getUnmaskedText() : null,
         passwordHash: _passwordController.text,
-        dateOfBirth: rawDateOfBirth,
-        address: null, // Endereço nulo por enquanto
+        dateOfBirth: formattedDateOfBirth,
+        address: null, 
         latitude: null,
         longitude: null,
-        userType: 'cidadao',
+        userType: 'fisica', // Definido como 'fisica' diretamente
         profilePictureUrl: null,
         registrationDate: DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
         isActive: true,
@@ -103,7 +95,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Cadastro realizado com sucesso!')),
           );
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(); // Volta para a tela de login
         } else {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -115,7 +107,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erro: ${e.toString()}')),
         );
-        print('Erro detalhado no registro: $e');
+        debugPrint('Erro detalhado no registro: $e');
       }
     }
   }
@@ -141,17 +133,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextFormField(
                   controller: _fullNameController,
                   decoration: const InputDecoration(labelText: 'Nome Completo'),
-                  // Validação aprimorada para nome (apenas letras, espaços e alguns caracteres acentuados)
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r"^[a-zA-Z\u00C0-\u00FF\s\-']+$")),
+                  ],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Por favor, insira seu nome completo.';
                     }
-                    if (!RegExp(r'^[a-zA-Z\u00C0-\u00FF\s\.\-]+$').hasMatch(value)) {
-                      return 'Nome inválido. Use apenas letras e espaços.';
+                    if (!RegExp(r"^[a-zA-Z\u00C0-\u00FF\s\-']+$").hasMatch(value)) {
+                      return 'Nome inválido. Use apenas letras, espaços, hífens e apóstrofos.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _cpfController,
+                  decoration: const InputDecoration(labelText: 'CPF'),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [_cpfFormatter],
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, insira seu CPF.';
+                    }
+                    if (_cpfFormatter.getUnmaskedText().length < 11) {
+                      return 'CPF incompleto (requer 11 dígitos).';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _dateOfBirthController,
+                  decoration: const InputDecoration(labelText: 'Data de Nascimento (DD/MM/AAAA)'),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [_dateFormatter],
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Por favor, insira sua data de nascimento.';
+                    }
+                    if (value.length < 10) {
+                      return 'Data incompleta.';
+                    }
+                    if (!RegExp(r'^\d{2}\/\d{2}\/\d{4}$').hasMatch(value)) {
+                      return 'Formato de data inválido (DD/MM/AAAA).';
+                    }
+                    try {
+                      DateFormat('dd/MM/yyyy').parseStrict(value);
+                    } catch (e) {
+                      return 'Data inválida.';
                     }
                     return null;
                   },
@@ -161,49 +196,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _emailController,
                   decoration: const InputDecoration(labelText: 'E-mail'),
                   keyboardType: TextInputType.emailAddress,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                  ],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Por favor, insira seu e-mail.';
                     }
-                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                    if (!RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+(?:\.[a-zA-Z]+)*$")
+                        .hasMatch(value)) {
                       return 'E-mail inválido.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _cpfController,
-                  decoration: const InputDecoration(labelText: 'CPF (opcional)'),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [_cpfFormatter], // Aplica a máscara de CPF
-                  validator: (value) {
-                    if (value != null && value.isNotEmpty && value.length < 14 && _cpfFormatter.getUnmaskedText().length < 11) {
-                      return 'CPF incompleto.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _dateOfBirthController,
-                  decoration: const InputDecoration(labelText: 'Data de Nascimento (DD/MM/AAAA)'),
-                  keyboardType: TextInputType.number, // Tipo numérico para facilitar a máscara
-                  inputFormatters: [_dateFormatter], // Aplica a máscara de data
-                  validator: (value) {
-                    if (value != null && value.isNotEmpty) {
-                      if (value.length < 10) return 'Data incompleta.';
-                      // Validação de formato básico (DD/MM/AAAA)
-                      if (!RegExp(r'^\d{2}\/\d{2}\/\d{4}$').hasMatch(value)) {
-                        return 'Formato de data inválido (DD/MM/AAAA).';
-                      }
-                      // Adicione validação de data real (ex: dia/mês/ano válidos) se necessário
-                      // Exemplo de validação simples de data:
-                      try {
-                        DateFormat('dd/MM/yyyy').parseStrict(value);
-                      } catch (e) {
-                        return 'Data inválida.';
-                      }
                     }
                     return null;
                   },
@@ -217,9 +219,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty || value.length < 6) {
                       return 'A senha deve ter pelo menos 6 caracteres.';
                     }
-                    // Validação de segurança básica da senha (pelo menos uma letra, um número, um caractere especial)
-                    if (!RegExp(r'(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+?]).*$').hasMatch(value)) {
-                      return 'A senha deve conter letras, números e símbolos.';
+                    if (!RegExp(r'^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+?]).{6,}$').hasMatch(value)) {
+                      return 'A senha deve conter letras, números e símbolos (mín. 6 caracteres).';
                     }
                     return null;
                   },

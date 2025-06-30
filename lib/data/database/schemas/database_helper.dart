@@ -16,6 +16,7 @@ import 'package:nuntius/data/database/schemas/seguidores_schema.dart';
 import 'package:nuntius/data/database/schemas/anexos_postagem_schema.dart';
 import 'package:nuntius/data/database/schemas/logs_sistema_schema.dart';
 
+
 class DatabaseHelper {
   static Database? _database;
   static const String _databaseName = 'nuntius.db';

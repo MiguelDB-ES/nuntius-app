@@ -1,10 +1,8 @@
 // lib/data/repositories/auth_repository.dart
 import 'package:sqflite/sqflite.dart';
-// VERIFIQUE: Caminho exato para database_helper.dart
+import 'package:flutter/foundation.dart'; // NOVO: Importe para usar debugPrint
 import 'package:nuntius/data/database/schemas/database_helper.dart'; 
-// VERIFIQUE: Caminho exato para usuarios_schema.dart
 import 'package:nuntius/data/database/schemas/usuarios_schema.dart'; 
-// VERIFIQUE: Caminho exato para user_model.dart
 import 'package:nuntius/models/user_model.dart'; 
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
@@ -18,6 +16,8 @@ class AuthRepository {
     return digest.toString();
   }
 
+  /// Registra um novo usuário no banco de dados.
+  /// Retorna o ID da linha inserida ou -1 em caso de falha.
   Future<int> registerUser(UserModel user) async {
     final db = await _databaseHelper.database;
     final hashedPassword = _hashPassword(user.passwordHash);
@@ -44,11 +44,13 @@ class AuthRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (e) {
-      print('Erro ao registrar usuário: $e');
+      debugPrint('Erro ao registrar usuário: $e'); 
       return -1;
     }
   }
 
+  /// Tenta autenticar um usuário.
+  /// Retorna o UserModel se o login for bem-sucedido e o usuário estiver ativo, caso contrário, retorna null.
   Future<UserModel?> loginUser(String emailOrCpf, String password) async {
     final db = await _databaseHelper.database;
     final hashedPassword = _hashPassword(password);
@@ -65,6 +67,7 @@ class AuthRepository {
     return null;
   }
 
+  /// Busca um usuário pelo ID.
   Future<UserModel?> getUserById(int id) async {
     final db = await _databaseHelper.database;
     final List<Map<String, dynamic>> results = await db.query(
@@ -78,6 +81,7 @@ class AuthRepository {
     return null;
   }
 
+  /// Atualiza as informações de um usuário.
   Future<int> updateUser(UserModel user) async {
     final db = await _databaseHelper.database;
     return await db.update(
@@ -88,6 +92,7 @@ class AuthRepository {
     );
   }
 
+  /// Deleta um usuário.
   Future<int> deleteUser(int id) async {
     final db = await _databaseHelper.database;
     return await db.delete(
