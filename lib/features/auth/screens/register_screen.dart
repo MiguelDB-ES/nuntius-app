@@ -1,7 +1,7 @@
 // lib/features/auth/screens/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Para FilteringTextInputFormatter
-import 'package:nuntius/core/routes/app_routes.dart'; // Pode não ser usado diretamente aqui, mas manter por segurança
+import 'package:nuntius/core/routes/app_routes.dart'; // Mantenha, pois ele faz a navegação para login
 import 'package:nuntius/data/repositories/auth_repository.dart';
 import 'package:nuntius/models/user_model.dart';
 import 'package:intl/intl.dart';
@@ -79,11 +79,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         cpf: _cpfController.text.isNotEmpty ? _cpfFormatter.getUnmaskedText() : null,
         passwordHash: _passwordController.text,
         dateOfBirth: formattedDateOfBirth,
-        address: null, 
+        address: null, // Endereço não coletado nesta tela
         latitude: null,
         longitude: null,
-        userType: 'fisica', // Definido como 'fisica' diretamente
-        profilePictureUrl: null,
+        userType: 'fisica', // Definido como 'fisica' diretamente e não é alterável
+        profilePictureUrl: null, // NULO no registro inicial, será editado depois
         registrationDate: DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
         isActive: true,
       );
@@ -95,17 +95,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Cadastro realizado com sucesso!')),
           );
-          Navigator.of(context).pop(); // Volta para a tela de login
+          // Volta para a tela de login após o registro
+          Navigator.of(context).pop(); 
         } else {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Erro ao cadastrar usuário.')),
+            const SnackBar(content: Text('Erro ao cadastrar usuário. Verifique se o e-mail ou CPF já estão em uso.')),
           );
         }
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: ${e.toString()}')),
+          SnackBar(content: Text('Erro inesperado: ${e.toString()}')),
         );
         debugPrint('Erro detalhado no registro: $e');
       }
@@ -161,6 +162,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return 'Por favor, insira seu CPF.';
                     }
+                    // Adicionei a validação para CPF já existir no backend aqui se necessário
                     if (_cpfFormatter.getUnmaskedText().length < 11) {
                       return 'CPF incompleto (requer 11 dígitos).';
                     }
@@ -207,6 +209,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         .hasMatch(value)) {
                       return 'E-mail inválido.';
                     }
+                    // Adicionei a validação para e-mail já existir no backend aqui se necessário
                     return null;
                   },
                 ),

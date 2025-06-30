@@ -1,26 +1,52 @@
+// lib/features/auth/screens/splash_screen.dart
 import 'package:flutter/material.dart';
 import 'package:nuntius/core/routes/app_routes.dart';
+import 'package:nuntius/data/repositories/auth_repository.dart';
+import 'package:nuntius/core/session/session_manager.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    Future.delayed(const Duration(seconds: 2), () {
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  final AuthRepository _authRepository = AuthRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUserSession();
+  }
+
+  Future<void> _checkUserSession() async {
+    // Carrega a sessão do usuário do SharedPreferences
+    final user = await _authRepository.loadUserSession();
+
+    if (!mounted) return; // Garante que o widget ainda está montado
+
+    if (user != null) {
+      // Se houver um usuário salvo, define-o na sessão em memória
+      SessionManager().setCurrentUser(user);
+      // Redireciona para a Home Screen
+      Navigator.of(context).pushReplacementNamed(AppRoutes.userHome);
+    } else {
+      // Se não houver usuário salvo, redireciona para a Welcome Screen
       Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
-    });
-    return Scaffold(
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.message, size: 100, color: Theme.of(context).primaryColor),
+            CircularProgressIndicator(), // Indicador de carregamento
             SizedBox(height: 20),
-            Text('Nuntius', style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 48, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            Text('Conectando Cidadãos e Agentes Públicos', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge),
-            SizedBox(height: 50),
-            CircularProgressIndicator(color: Theme.of(context).primaryColor),
+            Text('Carregando...', style: TextStyle(fontSize: 18)),
           ],
         ),
       ),

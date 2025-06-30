@@ -20,8 +20,9 @@ import 'package:nuntius/data/database/schemas/logs_sistema_schema.dart';
 class DatabaseHelper {
   static Database? _database;
   static const String _databaseName = 'nuntius.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2; // INCREMENTADO PARA A VERSÃO 2
 
+  // Singleton
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
 
@@ -38,14 +39,16 @@ class DatabaseHelper {
       databasePath,
       version: _databaseVersion,
       onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
+      onUpgrade: _onUpgrade, // Garante que onUpgrade é chamado
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
     );
   }
 
+  // Método chamado quando o banco de dados é criado pela primeira vez
   Future _onCreate(Database db, int version) async {
+    print("Criando tabelas para a versão $version...");
     await db.execute(UsuariosSchema.createTableSql);
     await db.execute(ForunsSchema.createTableSql);
     await db.execute(ChatsSchema.createTableSql);
@@ -62,16 +65,68 @@ class DatabaseHelper {
     await db.execute(ComentariosSchema.createTableSql);
 
     await db.execute(ReacoesSchema.createTableSql);
+    print("Tabelas criadas com sucesso.");
   }
 
+  // Método chamado quando a versão do banco de dados é incrementada
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Implemente a lógica de migração aqui
-  }
+    print("Atualizando banco de dados de $oldVersion para $newVersion...");
 
-  Future<void> close() async {
-    if (_database != null && _database!.isOpen) {
-      await _database!.close();
-      _database = null;
+    if (oldVersion < 2) {
+      // Migração da versão 1 para a versão 2
+      // Alterações:
+      // - Remoção da restrição UNIQUE do campo 'cpf' na tabela 'Usuarios'.
+      // - Adição de DEFAULT 'fisica' para 'tipo_usuario' na tabela 'Usuarios'.
+
+      // 1. Renomear a tabela antiga
+      await db.execute('ALTER TABLE ${UsuariosSchema.tableName} RENAME TO ${UsuariosSchema.tableName}_old');
+      print("Tabela ${UsuariosSchema.tableName} renomeada para ${UsuariosSchema.tableName}_old.");
+
+      // 2. Criar a nova tabela com o novo esquema
+      await db.execute(UsuariosSchema.createTableSql);
+      print("Nova tabela ${UsuariosSchema.tableName} criada.");
+
+      // 3. Copiar dados da tabela antiga para a nova
+      // Seleciona todas as colunas da tabela antiga, exceto 'cnpj' se existisse
+      // E garante que 'tipo_usuario' tenha um valor padrão se for nulo na antiga
+      await db.execute('''
+        INSERT INTO ${UsuariosSchema.tableName} (
+          ${UsuariosSchema.id},
+          ${UsuariosSchema.nomeCompleto},
+          ${UsuariosSchema.email},
+          ${UsuariosSchema.cpf},
+          ${UsuariosSchema.senhaHash},
+          ${UsuariosSchema.dataNascimento},
+          ${UsuariosSchema.endereco},
+          ${UsuariosSchema.latitude},
+          ${UsuariosSchema.longitude},
+          ${UsuariosSchema.tipoUsuario},
+          ${UsuariosSchema.urlFotoPerfil},
+          ${UsuariosSchema.dataCadastro},
+          ${UsuariosSchema.ativo}
+        )
+        SELECT
+          ${UsuariosSchema.id},
+          ${UsuariosSchema.nomeCompleto},
+          ${UsuariosSchema.email},
+          ${UsuariosSchema.cpf},
+          ${UsuariosSchema.senhaHash},
+          ${UsuariosSchema.dataNascimento},
+          ${UsuariosSchema.endereco},
+          ${UsuariosSchema.latitude},
+          ${UsuariosSchema.longitude},
+          COALESCE(${UsuariosSchema.tipoUsuario}, 'fisica'), -- Garante 'fisica' se for nulo
+          ${UsuariosSchema.urlFotoPerfil},
+          ${UsuariosSchema.dataCadastro},
+          ${UsuariosSchema.ativo}
+        FROM ${UsuariosSchema.tableName}_old
+      ''');
+      print("Dados copiados de ${UsuariosSchema.tableName}_old para ${UsuariosSchema.tableName}.");
+
+      // 4. Excluir a tabela antiga
+      await db.execute('DROP TABLE ${UsuariosSchema.tableName}_old');
+      print("Tabela ${UsuariosSchema.tableName}_old excluída.");
     }
+    print("Atualização do banco de dados concluída para a versão $newVersion.");
   }
 }

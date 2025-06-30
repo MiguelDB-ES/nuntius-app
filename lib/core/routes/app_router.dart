@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nuntius/core/routes/app_routes.dart';
 
 // Importe todas as telas aqui
-import 'package:nuntius/features/auth/screens/splash_screen.dart';
+import 'package:nuntius/features/auth/screens/splash_screen.dart'; // NOVO: Importe a SplashScreen
 import 'package:nuntius/features/auth/screens/welcome_screen.dart';
 import 'package:nuntius/features/auth/screens/login_screen.dart';
 import 'package:nuntius/features/auth/screens/register_screen.dart';
@@ -19,14 +19,12 @@ import 'package:nuntius/features/user/profile/screens/edit_profile_screen.dart';
 import 'package:nuntius/features/user/profile/screens/user_settings_screen.dart';
 import 'package:nuntius/features/user/profile/screens/user_menu_overlay.dart';
 import 'package:nuntius/features/user/search/screens/search_screen.dart';
-
-import 'package:nuntius/features/admin/screens/admin_login_screen.dart';
+import 'package:nuntius/features/admin/screens/admin_login_screen.dart'; // Importe a tela de login do admin
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
-      // Rotas de autenticação
-      case AppRoutes.splash:
+      case AppRoutes.splash: // Defina a SplashScreen como a rota inicial
         return MaterialPageRoute(builder: (_) => const SplashScreen());
       case AppRoutes.welcome:
         return MaterialPageRoute(builder: (_) => const WelcomeScreen());

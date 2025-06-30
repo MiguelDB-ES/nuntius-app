@@ -24,7 +24,7 @@ class UserModel {
     this.address,
     this.latitude,
     this.longitude,
-    required this.userType, // Este é o parâmetro que define o tipo de usuário
+    this.userType = 'fisica', // Define 'fisica' como padrão
     this.profilePictureUrl,
     required this.registrationDate,
     this.isActive = true,
@@ -61,10 +61,43 @@ class UserModel {
       address: map['endereco'],
       latitude: map['latitude'],
       longitude: map['longitude'],
-      userType: map['tipo_usuario'], // Mapeia da coluna 'tipo_usuario' do DB
+      userType: map['tipo_usuario'] ?? 'fisica', // Garante 'fisica' como padrão ao carregar
       profilePictureUrl: map['url_foto_perfil'],
       registrationDate: map['data_cadastro'],
       isActive: map['ativo'] == 1,
+    );
+  }
+
+  // Método copyWith para facilitar a criação de novas instâncias com campos modificados
+  UserModel copyWith({
+    int? id,
+    String? fullName,
+    String? email,
+    String? cpf,
+    String? passwordHash,
+    String? dateOfBirth,
+    String? address,
+    double? latitude,
+    double? longitude,
+    String? userType,
+    String? profilePictureUrl,
+    String? registrationDate,
+    bool? isActive,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      cpf: cpf ?? this.cpf,
+      passwordHash: passwordHash ?? this.passwordHash,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      address: address ?? this.address,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      userType: userType ?? this.userType,
+      profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
+      registrationDate: registrationDate ?? this.registrationDate,
+      isActive: isActive ?? this.isActive,
     );
   }
 }
