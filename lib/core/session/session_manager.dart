@@ -1,41 +1,54 @@
 // lib/core/session/session_manager.dart
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nuntius/models/user_model.dart';
-import 'package:flutter/foundation.dart'; // Para debugPrint
 
-/// Uma classe singleton para gerenciar a sessão do usuário logado.
 class SessionManager {
-  // Instância única do SessionManager (singleton)
+  // Singleton instance
   static final SessionManager _instance = SessionManager._internal();
 
-  // Construtor privado para garantir que apenas uma instância seja criada
   factory SessionManager() {
     return _instance;
   }
 
   SessionManager._internal();
 
-  // Variável para armazenar o UserModel do usuário logado
   UserModel? _currentUser;
+  SharedPreferences? _prefs;
 
-  /// Retorna o usuário atualmente logado. Pode ser nulo se nenhum usuário estiver logado.
+  // Getter para o usuário atual
   UserModel? get currentUser => _currentUser;
 
-  /// Define o usuário atualmente logado.
-  void setCurrentUser(UserModel? user) {
-    _currentUser = user;
-    if (user != null) {
-      debugPrint('Usuário logado na sessão: ${user.email}');
-    } else {
-      debugPrint('Sessão do usuário limpa.');
+  // Inicializa o SharedPreferences
+  Future<void> _initPrefs() async {
+    _prefs ??= await SharedPreferences.getInstance();
+  }
+
+  // Carrega o usuário da sessão persistente (SharedPreferences)
+  Future<void> loadCurrentUser() async {
+    await _initPrefs();
+    final userJson = _prefs!.getString('currentUser');
+    if (userJson != null) {
+      _currentUser = UserModel.fromMap(json.decode(userJson));
     }
   }
 
-  /// Verifica se há um usuário logado na sessão.
-  bool get isLoggedIn => _currentUser != null;
+  // Define o usuário atual e o salva na sessão persistente
+  Future<void> setCurrentUser(UserModel user) async {
+    await _initPrefs();
+    _currentUser = user;
+    await _prefs!.setString('currentUser', json.encode(user.toMap()));
+  }
 
-  /// Limpa o usuário da sessão.
-  void clearCurrentUser() {
+  // Limpa o usuário da sessão e do armazenamento persistente (logout)
+  Future<void> logout() async {
+    await _initPrefs();
     _currentUser = null;
-    debugPrint('Usuário removido da sessão em memória.');
+    await _prefs!.remove('currentUser'); // Remove o usuário do SharedPreferences
+  }
+
+  // Verifica se há um usuário logado
+  bool isLoggedIn() {
+    return _currentUser != null;
   }
 }

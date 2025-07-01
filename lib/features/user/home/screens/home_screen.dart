@@ -28,47 +28,142 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          // Adicione outros ícones de ação se necessário
+          // Por exemplo, um ícone de notificação:
           IconButton(
             icon: const Icon(Icons.notifications_none),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notificações em breve!')),
+                const SnackBar(content: Text('Notificações')),
               );
             },
           ),
         ],
       ),
-      body: ListView.builder(
-        itemCount: 10, // Simula um feed infinito de notícias. Futuramente, virá de um repositório.
-        itemBuilder: (context, index) {
-          // Cada item do feed é um PostCard
-          return PostCard(
-            index: index,
-            onTap: () => Navigator.of(context).pushNamed(AppRoutes.newsDetail),
-            onProfileTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Navegar para Perfil do Autor/Fórum')),
-              );
-              // Futuramente, navegar para o perfil do autor
-            },
-          );
-        },
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Bem-vindo(a) ao Nuntius!',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Últimas Notícias',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            // Lista de Notícias de Exemplo
+            ListView.builder(
+              shrinkWrap: true, // Para que a ListView ocupe apenas o espaço necessário
+              physics: const NeverScrollableScrollPhysics(), // Desabilita o scroll da ListView interna
+              itemCount: 3, // Exemplo de 3 notícias
+              itemBuilder: (context, index) {
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.of(context).pushNamed(AppRoutes.newsDetail);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Image.network(
+                            'https://placehold.co/600x200/cccccc/ffffff?text=Noticia+${index + 1}',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              height: 200,
+                              color: Colors.grey,
+                              child: const Center(child: Text('Erro ao carregar imagem')),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Título da Notícia ${index + 1}',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Breve descrição da notícia. Lorem ipsum dolor sit amet...',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildReactionButton(context, Icons.thumb_up, 'Curtir', 120),
+                              _buildReactionButton(context, Icons.comment, 'Comentar', 35),
+                              _buildReactionButton(context, Icons.share, 'Compartilhar', 10),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Fóruns Ativos',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            // Lista de Fóruns de Exemplo
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 2, // Exemplo de 2 fóruns
+              itemBuilder: (context, index) {
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: ListTile(
+                    title: Text('Fórum de Discussão ${index + 1}', style: Theme.of(context).textTheme.titleMedium),
+                    subtitle: Text('Última atividade há 2 horas.'),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      Navigator.of(context).pushNamed(AppRoutes.forumTopicDetail);
+                    },
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Garante que todos os ícones sejam exibidos
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Theme.of(context).textTheme.bodySmall?.color,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        // CORRIGIDO: Adicionado o parâmetro 'items' que é obrigatório
         items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.campaign), label: 'Fóruns'), // Megafone
-          BottomNavigationBarItem(icon: Icon(Icons.add_circle), label: 'Criar'), // Símbolo de adição
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: 'Chats'), // Balão de fala
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.forum),
+            label: 'Fórum',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_box),
+            label: 'Publicar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat),
+            label: 'Chats',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Perfil',
+          ),
         ],
-        currentIndex: 0,
+        currentIndex: 0, // Define o item inicial selecionado
+        selectedItemColor: Theme.of(context).primaryColor, // Cor do item selecionado
+        unselectedItemColor: Colors.grey, // Cor dos itens não selecionados
         onTap: (index) {
-          // Lógica de navegação da barra inferior
+          // Lógica de navegação para a barra inferior
           switch (index) {
             case 0:
               // Já está na Home
@@ -90,20 +185,6 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-// Widget separado para representar um card de postagem no feed
-class PostCard extends StatelessWidget {
-  final int index;
-  final VoidCallback onTap;
-  final VoidCallback onProfileTap;
-
-  const PostCard({
-    super.key,
-    required this.index,
-    required this.onTap,
-    required this.onProfileTap,
-  });
 
   // Widget auxiliar para construir botões de reação
   Widget _buildReactionButton(BuildContext context, IconData icon, String label, int count) {
@@ -113,7 +194,6 @@ class PostCard extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$label: $count')),
         );
-        // Futuramente, implementar a lógica de reação (ex: curtir, comentar)
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -122,117 +202,8 @@ class PostCard extends StatelessWidget {
             Icon(icon, size: 20, color: Theme.of(context).textTheme.bodyMedium?.color),
             const SizedBox(width: 4),
             Text('$count', style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(width: 4),
-            Text(label, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(width: 8),
           ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12.0),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
-                    child: Icon(Icons.person, size: 24, color: Theme.of(context).primaryColor),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Autor da Postagem ${index + 1}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      Text(
-                        'Data: 10/06/2024 - Hora: 15:${10 + index}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.more_vert),
-                    onPressed: () {
-                      // Opções da postagem (ex: denunciar, salvar)
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Opções da Postagem')),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Notícia ${index + 1}: Título da Notícia Impactante sobre a Comunidade',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              // Placeholder para imagem da notícia
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),
-                child: Image.network(
-                  'https://placehold.co/600x300/${(0xFF000000 + (index * 1000000)).toRadixString(16).substring(2, 8)}/${(0xFFFFFFFF - (index * 1000000)).toRadixString(16).substring(2, 8)}?text=Noticia%20${index + 1}',
-                  fit: BoxFit.cover,
-                  height: 200,
-                  width: double.infinity,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 200,
-                    color: Theme.of(context).cardColor,
-                    child: Center(
-                      child: Text(
-                        'Erro ao carregar imagem',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Breve descrição da notícia. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Esta é uma prévia do conteúdo, clique para ler mais...',
-                style: Theme.of(context).textTheme.bodyMedium,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildReactionButton(context, Icons.favorite_border, 'Curtir', 123 + index),
-                  _buildReactionButton(context, Icons.comment_outlined, 'Comentar', 45 + index),
-                  _buildReactionButton(context, Icons.share_outlined, 'Compartilhar', 10 + index),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: onProfileTap,
-                  child: const Text('Ver Perfil do Autor/Fórum'),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

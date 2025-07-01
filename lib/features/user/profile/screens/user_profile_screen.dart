@@ -1,8 +1,8 @@
 // lib/features/user/profile/screens/user_profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:nuntius/core/routes/app_routes.dart';
-import 'package:nuntius/core/session/session_manager.dart'; // NOVO: Importe o SessionManager
-import 'package:nuntius/data/repositories/auth_repository.dart'; // NOVO: Importe o AuthRepository
+import 'package:nuntius/data/services/user_service.dart';
+import 'package:nuntius/models/user_model.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -12,29 +12,31 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  final AuthRepository _authRepository = AuthRepository();
+  UserModel? _user; // O usuário será carregado aqui
 
-  // Função para lidar com o logout
-  Future<void> _logout() async {
-    await _authRepository.clearUserSession(); // Limpa a sessão no SharedPreferences
-    SessionManager().clearCurrentUser(); // Limpa a sessão em memória
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  // Carrega os dados do usuário do UserService
+  Future<void> _loadUser() async {
+    final user = UserService().currentUser;
     if (mounted) {
-      // Redireciona para a tela de login ou welcome, removendo todas as rotas anteriores
-      Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
+      setState(() {
+        _user = user;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = SessionManager().currentUser; // Obtém o usuário logado
-
-    if (currentUser == null) {
-      // Caso não haja usuário logado (o que não deveria acontecer se a SplashScreen funcionar corretamente)
-      return Scaffold(
-        appBar: AppBar(title: const Text('Perfil')),
-        body: const Center(
-          child: Text('Nenhum usuário logado.'),
-        ),
+    // Se o usuário ainda não foi carregado, exibe um indicador de carregamento
+    if (_user == null) {
+      return Scaffold( // REMOVIDO 'const' daqui
+        appBar: AppBar(title: const Text('Meu Perfil')), // Adicionado 'const' ao Text para otimização, mas não é obrigatório agora
+        body: const Center(child: CircularProgressIndicator()), // Mantido 'const' aqui se Center e CircularProgressIndicator forem const
       );
     }
 
@@ -44,77 +46,121 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: () {
-              Navigator.of(context).pushNamed(AppRoutes.editProfile);
+            onPressed: () async {
+              // Navega para a tela de edição e recarrega o perfil ao retornar
+              await Navigator.of(context).pushNamed(AppRoutes.editProfile);
+              _loadUser(); // Recarrega os dados após a edição
             },
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout, // Chama a função de logout
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.of(context).pushNamed(AppRoutes.userSettings);
+            },
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Imagem de Perfil
-            CircleAvatar(
-              radius: 60,
-              backgroundImage: currentUser.profilePictureUrl != null && currentUser.profilePictureUrl!.isNotEmpty
-                  ? NetworkImage(currentUser.profilePictureUrl!) as ImageProvider
-                  : const AssetImage('assets/images/default_profile.png'), // Imagem padrão
-              child: currentUser.profilePictureUrl == null || currentUser.profilePictureUrl!.isEmpty
-                  ? const Icon(Icons.person, size: 60, color: Colors.white70)
-                  : null,
-            ),
-            const SizedBox(height: 16),
-            // Nome Completo
-            Text(
-              currentUser.fullName,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            // Email
-            Text(
-              currentUser.email,
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            // Detalhes do Perfil em Cards
-            Card(
-              margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildProfileDetailRow(context, Icons.badge, 'Tipo de Usuário:', currentUser.userType == 'fisica' ? 'Pessoa Física' : 'Administrador'),
-                    if (currentUser.cpf != null && currentUser.cpf!.isNotEmpty)
-                      _buildProfileDetailRow(context, Icons.credit_card, 'CPF:', currentUser.cpf!),
-                    if (currentUser.dateOfBirth != null && currentUser.dateOfBirth!.isNotEmpty)
-                      _buildProfileDetailRow(context, Icons.calendar_today, 'Data de Nascimento:', currentUser.dateOfBirth!),
-                    if (currentUser.address != null && currentUser.address!.isNotEmpty)
-                      _buildProfileDetailRow(context, Icons.location_on, 'Endereço:', currentUser.address!),
-                    _buildProfileDetailRow(context, Icons.app_registration, 'Data de Cadastro:', currentUser.registrationDate),
-                    _buildProfileDetailRow(context, Icons.check_circle_outline, 'Status:', currentUser.isActive ? 'Ativo' : 'Inativo'),
-                  ],
+            // Seção do Cabeçalho do Perfil
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
                 ),
+              ),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 60,
+                    backgroundImage: NetworkImage(
+                      _user!.profilePictureUrl ?? 'https://placehold.co/120x120/FFC107/FFFFFF?text=NU', // Fallback para URL de imagem
+                    ),
+                    onBackgroundImageError: (exception, stackTrace) {
+                      debugPrint('Erro ao carregar imagem de perfil: $exception');
+                      // Pode exibir um ícone de erro ou imagem padrão
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _user!.fullName, // Nome do usuário real
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _user!.email, // Email do usuário real
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatColumn(context, 'Postagens', '150'), // Estes ainda são fictícios
+                      _buildStatColumn(context, 'Seguidores', '2.5K'),
+                      _buildStatColumn(context, 'Seguindo', '300'),
+                    ],
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
-            // Outras ações ou informações podem ser adicionadas aqui
-            ElevatedButton(
-              onPressed: () {
-                // Exemplo de outra ação
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Configurações do perfil...')),
-                );
-              },
-              child: const Text('Configurações'),
+            // Seção de Postagens do Usuário (Exemplo)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Minhas Postagens',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: 5, // Exemplo de 5 postagens
+                    itemBuilder: (context, index) {
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 8.0),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Título da Minha Postagem ${index + 1}',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Conteúdo breve da postagem. Lorem ipsum dolor sit amet, consectetur adipiscing elit...',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.bottomRight,
+                                child: Text(
+                                  'Publicado em: 15/06/2024',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -122,32 +168,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  // Widget auxiliar para construir linhas de detalhes do perfil
-  Widget _buildProfileDetailRow(BuildContext context, IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+  // Widget auxiliar para exibir estatísticas do perfil
+  Widget _buildStatColumn(BuildContext context, String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+        ),
+      ],
     );
   }
 }

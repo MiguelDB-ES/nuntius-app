@@ -16,7 +16,8 @@ class NuntiusApp extends StatelessWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
-      initialRoute: AppRoutes.splash, // NOVO: Define a SplashScreen como a rota inicial
+      // Definimos a SplashScreen como a rota inicial
+      initialRoute: AppRoutes.splash,
       onGenerateRoute: AppRouter.generateRoute,
     );
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nuntius/core/routes/app_routes.dart';
 
 // Importe todas as telas aqui
-import 'package:nuntius/features/auth/screens/splash_screen.dart'; // NOVO: Importe a SplashScreen
+import 'package:nuntius/features/auth/screens/splash_screen.dart';
 import 'package:nuntius/features/auth/screens/welcome_screen.dart';
 import 'package:nuntius/features/auth/screens/login_screen.dart';
 import 'package:nuntius/features/auth/screens/register_screen.dart';
@@ -19,12 +19,16 @@ import 'package:nuntius/features/user/profile/screens/edit_profile_screen.dart';
 import 'package:nuntius/features/user/profile/screens/user_settings_screen.dart';
 import 'package:nuntius/features/user/profile/screens/user_menu_overlay.dart';
 import 'package:nuntius/features/user/search/screens/search_screen.dart';
-import 'package:nuntius/features/admin/screens/admin_login_screen.dart'; // Importe a tela de login do admin
+import 'package:nuntius/features/admin/screens/admin_login_screen.dart'; // Exemplo de tela de admin
 
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
+    // O argumento passado para a rota (se houver)
+    final args = settings.arguments;
+
     switch (settings.name) {
-      case AppRoutes.splash: // Defina a SplashScreen como a rota inicial
+      // Rotas de autenticação
+      case AppRoutes.splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
       case AppRoutes.welcome:
         return MaterialPageRoute(builder: (_) => const WelcomeScreen());
@@ -45,7 +49,12 @@ class AppRouter {
       case AppRoutes.chatList:
         return MaterialPageRoute(builder: (_) => const ChatListScreen());
       case AppRoutes.chatScreen:
-        return MaterialPageRoute(builder: (_) => const ChatScreen());
+        // NOVO: Verifica se o argumento é uma String e passa para contactName
+        if (args is String) {
+          return MaterialPageRoute(builder: (_) => ChatScreen(contactName: args));
+        }
+        // Caso o argumento não seja uma String, ou seja nulo, retorna uma tela de erro
+        return MaterialPageRoute(builder: (_) => const Text('Erro: Nome do contato não fornecido para o chat!'));
       case AppRoutes.createPost:
         return MaterialPageRoute(builder: (_) => const CreatePostScreen());
       case AppRoutes.userProfile:

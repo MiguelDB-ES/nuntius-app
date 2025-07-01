@@ -24,7 +24,7 @@ class UserModel {
     this.address,
     this.latitude,
     this.longitude,
-    this.userType = 'fisica', // Define 'fisica' como padrão
+    required this.userType, // Este é o parâmetro que define o tipo de usuário
     this.profilePictureUrl,
     required this.registrationDate,
     this.isActive = true,
@@ -61,14 +61,14 @@ class UserModel {
       address: map['endereco'],
       latitude: map['latitude'],
       longitude: map['longitude'],
-      userType: map['tipo_usuario'] ?? 'fisica', // Garante 'fisica' como padrão ao carregar
+      userType: map['tipo_usuario'], // Mapeia de 'tipo_usuario' no DB
       profilePictureUrl: map['url_foto_perfil'],
       registrationDate: map['data_cadastro'],
       isActive: map['ativo'] == 1,
     );
   }
 
-  // Método copyWith para facilitar a criação de novas instâncias com campos modificados
+  // NOVO: Método copyWith para facilitar a atualização de propriedades
   UserModel copyWith({
     int? id,
     String? fullName,
